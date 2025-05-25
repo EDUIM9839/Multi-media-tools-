@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Text & Image to Video</title>
+  <title>Images & Optional Text-to-Audio to Video</title>
   <style>
     body { font-family: sans-serif; padding: 20px; }
     canvas { display: none; }
@@ -10,14 +10,13 @@
   </style>
 </head>
 <body>
-  <h1>Text & Image to Video Converter</h1>
+  <h1>Multiple Images & Optional Text-to-Audio to Video</h1>
 
-  <input type="file" id="imageUpload" accept="image/*"><br><br>
-  <textarea id="textInput" rows="4" cols="50" placeholder="Enter your text here..."></textarea><br><br>
+  <input type="file" id="imageUpload" accept="image/*" multiple><br><br>
+  <textarea id="textInput" rows="4" cols="50" placeholder="Optional text to be spoken..."></textarea><br><br>
   <button id="generateBtn">Generate Video</button>
 
   <video id="outputVideo" controls></video>
-
   <canvas id="canvas" width="640" height="480"></canvas>
 
   <script>
@@ -26,18 +25,13 @@
     const videoEl = document.getElementById('outputVideo');
 
     document.getElementById('generateBtn').onclick = async () => {
-      const imageFile = document.getElementById('imageUpload').files[0];
+      const imageFiles = Array.from(document.getElementById('imageUpload').files);
       const text = document.getElementById('textInput').value;
 
-      if (!imageFile || !text) {
-        alert("Please upload an image and enter text.");
+      if (imageFiles.length === 0) {
+        alert("Please upload at least one image.");
         return;
       }
-
-      const img = new Image();
-      img.src = URL.createObjectURL(imageFile);
-
-      await img.decode();
 
       const stream = canvas.captureStream();
       const recorder = new MediaRecorder(stream);
@@ -51,18 +45,24 @@
 
       recorder.start();
 
-      const frames = 60;
-      for (let i = 0; i < frames; i++) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      for (const file of imageFiles) {
+        const img = new Image();
+        img.src = URL.createObjectURL(file);
+        await img.decode();
 
-        ctx.font = '30px sans-serif';
-        ctx.fillStyle = 'white';
-        ctx.fillText(text, 20, 440);
-        await new Promise(r => setTimeout(r, 100));  // ~10 fps
+        for (let i = 0; i < 30; i++) { // Show each image for ~3 seconds
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          await new Promise(r => setTimeout(r, 100));  // ~10 fps
+        }
       }
 
       recorder.stop();
+
+      if (text.trim()) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        speechSynthesis.speak(utterance);
+      }
     };
   </script>
 </body>
