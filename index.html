@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Text & Image to Video</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    canvas { display: none; }
+    video { margin-top: 20px; width: 100%; max-width: 640px; }
+  </style>
+</head>
+<body>
+  <h1>Text & Image to Video Converter</h1>
+
+  <input type="file" id="imageUpload" accept="image/*"><br><br>
+  <textarea id="textInput" rows="4" cols="50" placeholder="Enter your text here..."></textarea><br><br>
+  <button id="generateBtn">Generate Video</button>
+
+  <video id="outputVideo" controls></video>
+
+  <canvas id="canvas" width="640" height="480"></canvas>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const videoEl = document.getElementById('outputVideo');
+
+    document.getElementById('generateBtn').onclick = async () => {
+      const imageFile = document.getElementById('imageUpload').files[0];
+      const text = document.getElementById('textInput').value;
+
+      if (!imageFile || !text) {
+        alert("Please upload an image and enter text.");
+        return;
+      }
+
+      const img = new Image();
+      img.src = URL.createObjectURL(imageFile);
+
+      await img.decode();
+
+      const stream = canvas.captureStream();
+      const recorder = new MediaRecorder(stream);
+      const chunks = [];
+
+      recorder.ondataavailable = e => chunks.push(e.data);
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'video/webm' });
+        videoEl.src = URL.createObjectURL(blob);
+      };
+
+      recorder.start();
+
+      const frames = 60;
+      for (let i = 0; i < frames; i++) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        ctx.font = '30px sans-serif';
+        ctx.fillStyle = 'white';
+        ctx.fillText(text, 20, 440);
+        await new Promise(r => setTimeout(r, 100));  // ~10 fps
+      }
+
+      recorder.stop();
+    };
+  </script>
+</body>
+</html>
