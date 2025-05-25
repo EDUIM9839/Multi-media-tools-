@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Image to Video with TTS</title>
+  <title>Image to Video with Text Overlay</title>
   <style>
     body {
       font-family: sans-serif;
@@ -32,7 +32,7 @@
   </style>
 </head>
 <body>
-  <h1>Upload Images, </h1>
+  <h1>Upload Images, Add Text & Duration</h1>
 
   <input type="file" id="imageUpload" accept="image/*" multiple />
   <div id="stepSection">
@@ -132,15 +132,8 @@
         img.src = URL.createObjectURL(file);
         await img.decode();
 
-        const utterance = new SpeechSynthesisUtterance(text);
-        window.speechSynthesis.speak(utterance);
-
-        let speechEnded = false;
-        utterance.onend = () => { speechEnded = true; };
-
         const startTime = performance.now();
 
-        // Draw frames continuously while TTS or duration is active
         while ((performance.now() - startTime) < duration * 1000) {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
@@ -150,7 +143,6 @@
             ctx.font = '28px sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            // Adding shadow for better visibility
             ctx.shadowColor = 'black';
             ctx.shadowBlur = 6;
             ctx.fillText(text, canvas.width / 2, canvas.height / 2);
@@ -158,13 +150,6 @@
           }
 
           await new Promise(r => setTimeout(r, 100)); // ~10fps
-        }
-
-        // Wait for speech to end if it hasn't finished yet
-        if (!speechEnded) {
-          await new Promise(resolve => {
-            utterance.onend = resolve;
-          });
         }
       }
 
