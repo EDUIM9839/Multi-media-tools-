@@ -101,11 +101,12 @@
     };
 
     generateBtn.onclick = async () => {
+      generateBtn.disabled = true;
       const totalDuration = imageData.reduce((sum, img) => sum + img.duration, 0);
       totalDurationEl.textContent = `Total Video Duration: ${totalDuration} seconds`;
 
-      const stream = canvas.captureStream();
-      const recorder = new MediaRecorder(stream);
+      const stream = canvas.captureStream(30); // 30fps
+      const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
       const chunks = [];
 
       recorder.ondataavailable = e => chunks.push(e.data);
@@ -121,6 +122,7 @@
           a.download = 'step_video.webm';
           a.click();
         };
+        generateBtn.disabled = false;
       };
 
       recorder.start();
@@ -132,23 +134,37 @@
 
         const utterance = new SpeechSynthesisUtterance(text);
         window.speechSynthesis.speak(utterance);
-        await new Promise(resolve => {
-          utterance.onend = resolve;
-        });
 
-        for (let i = 0; i < duration * 10; i++) {
+        let speechEnded = false;
+        utterance.onend = () => { speechEnded = true; };
+
+        const startTime = performance.now();
+
+        // Draw frames continuously while TTS or duration is active
+        while ((performance.now() - startTime) < duration * 1000) {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
           if (text) {
             ctx.fillStyle = 'white';
-            ctx.font = '24px sans-serif';
+            ctx.font = '28px sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
+            // Adding shadow for better visibility
+            ctx.shadowColor = 'black';
+            ctx.shadowBlur = 6;
             ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+            ctx.shadowBlur = 0;
           }
 
-          await new Promise(r => setTimeout(r, 100));
+          await new Promise(r => setTimeout(r, 100)); // ~10fps
+        }
+
+        // Wait for speech to end if it hasn't finished yet
+        if (!speechEnded) {
+          await new Promise(resolve => {
+            utterance.onend = resolve;
+          });
         }
       }
 
