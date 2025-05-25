@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Image to Video with Background Music</title>
+  <title>Image to Video</title>
   <style>
     body {
       font-family: sans-serif;
@@ -48,9 +48,6 @@
   <button id="downloadBtn" style="display:none;">Download Video</button>
   <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
 
-  <!-- Background music audio element -->
-  <audio id="bgMusic" src="https://cdn.pixabay.com/download/audio/2021/10/26/audio_b6e2ae2bbf.mp3?filename=happy-hip-hop-11955.mp3" crossorigin="anonymous"></audio>
-
   <script>
     const imageUpload = document.getElementById('imageUpload');
     const stepSection = document.getElementById('stepSection');
@@ -64,7 +61,6 @@
     const outputVideo = document.getElementById('outputVideo');
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
-    const bgMusic = document.getElementById('bgMusic');
 
     let files = [];
     let currentIndex = 0;
@@ -113,21 +109,8 @@
       const totalDuration = imageData.reduce((sum, img) => sum + img.duration, 0);
       totalDurationEl.textContent = `Total Video Duration: ${totalDuration} seconds`;
 
-      bgMusic.currentTime = 0;
-
       const videoStream = canvas.captureStream(30);
-
-      const audioContext = new AudioContext();
-      const sourceNode = audioContext.createMediaElementSource(bgMusic);
-      const destination = audioContext.createMediaStreamDestination();
-
-      sourceNode.connect(destination);
-      sourceNode.connect(audioContext.destination);
-
-      const combinedStream = new MediaStream([
-        ...videoStream.getVideoTracks(),
-        ...destination.stream.getAudioTracks()
-      ]);
+      const combinedStream = videoStream;
 
       const recorder = new MediaRecorder(combinedStream, { mimeType: 'video/webm' });
       const chunks = [];
@@ -142,14 +125,12 @@
         downloadBtn.onclick = () => {
           const a = document.createElement('a');
           a.href = url;
-          a.download = 'step_video_with_music.webm';
+          a.download = 'image_video.webm';
           a.click();
         };
         generateBtn.disabled = false;
-        audioContext.close();
       };
 
-      await bgMusic.play();
       recorder.start();
 
       let index = 0;
@@ -158,7 +139,6 @@
 
       const drawFrame = async () => {
         const current = imageData[index];
-        // To avoid creating multiple blobs URLs for same image, store them
         if (!img.src || img.src !== URL.createObjectURL(current.file)) {
           img.src = URL.createObjectURL(current.file);
           await img.decode();
@@ -189,8 +169,6 @@
             drawFrame();
           } else {
             recorder.stop();
-            bgMusic.pause();
-            bgMusic.currentTime = 0;
           }
         }
       };
