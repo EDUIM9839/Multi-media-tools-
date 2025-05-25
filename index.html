@@ -135,14 +135,11 @@
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
           if (text) {
-            // No background rectangle here
             ctx.fillStyle = 'white';
             ctx.font = '24px sans-serif';
-
             ctx.textAlign = 'center';
-            ctx.fillText(text, canvas.width / 2, canvas.height - 20);
-
-            ctx.textAlign = 'start';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, canvas.width / 2, canvas.height / 2);
           }
 
           await new Promise(r => setTimeout(r, 100));
