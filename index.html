@@ -2,15 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Images & Optional Text-to-Audio to Video</title>
+  <title>Images with Text and Duration</title>
   <style>
     body {
       font-family: sans-serif;
       padding: 20px;
-      max-width: 700px;
+      max-width: 800px;
       margin: auto;
     }
-    input[type="file"], button, textarea {
+    input[type="file"], button, textarea, input[type="number"] {
       font-size: 16px;
       padding: 10px;
       margin-bottom: 10px;
@@ -25,36 +25,86 @@
       width: 100%;
       max-width: 640px;
     }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+    }
     small {
       display: block;
-      margin-bottom: 15px;
+      margin-bottom: 10px;
       color: gray;
     }
   </style>
 </head>
 <body>
-  <h1>Multiple Images & Optional Text-to-Audio to Video</h1>
+  <h1>Upload Images with Text & Duration</h1>
 
   <input type="file" id="imageUpload" accept="image/*" multiple>
-  <small>Tip: On some mobile devices, long-press to select multiple images.</small>
+  <small>After selecting images, add text & duration for each below:</small>
 
-  <textarea id="textInput" rows="4" cols="50" placeholder="Optional text to be spoken..."></textarea>
+  <table id="imageTable">
+    <thead>
+      <tr>
+        <th>Image</th>
+        <th>Text</th>
+        <th>Duration (seconds)</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
   <button id="generateBtn">Generate Video</button>
-
   <video id="outputVideo" controls></video>
   <canvas id="canvas" width="640" height="480"></canvas>
 
   <script>
+    const imageUpload = document.getElementById('imageUpload');
+    const tableBody = document.querySelector('#imageTable tbody');
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
     const videoEl = document.getElementById('outputVideo');
 
-    document.getElementById('generateBtn').onclick = async () => {
-      const imageFiles = Array.from(document.getElementById('imageUpload').files);
-      const text = document.getElementById('textInput').value;
+    let imageData = [];
 
-      if (imageFiles.length === 0) {
+    imageUpload.onchange = () => {
+      imageData = [];
+      tableBody.innerHTML = '';
+
+      Array.from(imageUpload.files).forEach((file, index) => {
+        const row = document.createElement('tr');
+
+        const nameCell = document.createElement('td');
+        nameCell.textContent = file.name;
+
+        const textCell = document.createElement('td');
+        const textInput = document.createElement('input');
+        textInput.type = 'text';
+        textCell.appendChild(textInput);
+
+        const durationCell = document.createElement('td');
+        const durationInput = document.createElement('input');
+        durationInput.type = 'number';
+        durationInput.value = 3;
+        durationInput.min = 1;
+        durationCell.appendChild(durationInput);
+
+        row.appendChild(nameCell);
+        row.appendChild(textCell);
+        row.appendChild(durationCell);
+
+        tableBody.appendChild(row);
+
+        imageData.push({ file, textInput, durationInput });
+      });
+    };
+
+    document.getElementById('generateBtn').onclick = async () => {
+      if (imageData.length === 0) {
         alert("Please upload at least one image.");
         return;
       }
@@ -71,25 +121,29 @@
 
       recorder.start();
 
-      for (const file of imageFiles) {
+      for (const { file, textInput, durationInput } of imageData) {
+        const text = textInput.value.trim();
+        const duration = parseInt(durationInput.value) || 3;
+
         const img = new Image();
         img.src = URL.createObjectURL(file);
         await img.decode();
 
-        for (let i = 0; i < 30; i++) { // Show each image for ~3 seconds (30 frames at 10fps)
+        for (let i = 0; i < duration * 10; i++) {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          await new Promise(r => setTimeout(r, 100));  // 100ms per frame = 10fps
+          await new Promise(r => setTimeout(r, 100));
+        }
+
+        // Speak the text (optional)
+        if (text) {
+          const utterance = new SpeechSynthesisUtterance(text);
+          speechSynthesis.speak(utterance);
+          await new Promise(r => setTimeout(r, text.split(" ").length * 500)); // Rough estimate
         }
       }
 
       recorder.stop();
-
-      // Optional text-to-speech
-      if (text.trim()) {
-        const utterance = new SpeechSynthesisUtterance(text);
-        speechSynthesis.speak(utterance);
-      }
     };
   </script>
 </body>
