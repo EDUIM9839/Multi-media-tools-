@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Step-by-Step Image Text Entry</title>
+  <title>Image to Video with TTS</title>
   <style>
     body {
       font-family: sans-serif;
@@ -32,7 +32,7 @@
   </style>
 </head>
 <body>
-  <h1>Upload Images and Add Text & Duration (Step-by-Step)</h1>
+  <h1>Upload Images, Add Text & Duration</h1>
 
   <input type="file" id="imageUpload" accept="image/*" multiple />
   <div id="stepSection">
@@ -129,6 +129,12 @@
         const img = new Image();
         img.src = URL.createObjectURL(file);
         await img.decode();
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        window.speechSynthesis.speak(utterance);
+        await new Promise(resolve => {
+          utterance.onend = resolve;
+        });
 
         for (let i = 0; i < duration * 10; i++) {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
