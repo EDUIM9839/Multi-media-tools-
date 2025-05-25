@@ -87,6 +87,10 @@
       imageText.value = '';
       imageDuration.value = 3;
       stepSection.style.display = 'block';
+      generateBtn.style.display = 'none';
+      downloadBtn.style.display = 'none';
+      outputVideo.src = '';
+      totalDurationEl.textContent = '';
     }
 
     nextBtn.onclick = () => {
@@ -109,21 +113,17 @@
       const totalDuration = imageData.reduce((sum, img) => sum + img.duration, 0);
       totalDurationEl.textContent = `Total Video Duration: ${totalDuration} seconds`;
 
-      // Reset and prepare background music
       bgMusic.currentTime = 0;
 
-      // Capture canvas video stream
-      const videoStream = canvas.captureStream(30); // 30fps
+      const videoStream = canvas.captureStream(30);
 
-      // Setup AudioContext to capture audio stream from audio element
       const audioContext = new AudioContext();
       const sourceNode = audioContext.createMediaElementSource(bgMusic);
       const destination = audioContext.createMediaStreamDestination();
 
       sourceNode.connect(destination);
-      sourceNode.connect(audioContext.destination); // Optional: hear music while recording
+      sourceNode.connect(audioContext.destination);
 
-      // Combine video and audio tracks into one MediaStream
       const combinedStream = new MediaStream([
         ...videoStream.getVideoTracks(),
         ...destination.stream.getAudioTracks()
@@ -149,38 +149,53 @@
         audioContext.close();
       };
 
-      recorder.start();
       await bgMusic.play();
+      recorder.start();
 
-      for (const { file, text, duration } of imageData) {
-        const img = new Image();
-        img.src = URL.createObjectURL(file);
-        await img.decode();
+      let index = 0;
+      let startTime = performance.now();
+      let img = new Image();
 
-        const startTime = performance.now();
-
-        while ((performance.now() - startTime) < duration * 1000) {
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-          if (text) {
-            ctx.fillStyle = 'white';
-            ctx.font = '28px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.shadowColor = 'black';
-            ctx.shadowBlur = 6;
-            ctx.fillText(text, canvas.width / 2, canvas.height / 2);
-            ctx.shadowBlur = 0;
-          }
-
-          await new Promise(r => setTimeout(r, 100)); // ~10fps
+      const drawFrame = async () => {
+        const current = imageData[index];
+        // To avoid creating multiple blobs URLs for same image, store them
+        if (!img.src || img.src !== URL.createObjectURL(current.file)) {
+          img.src = URL.createObjectURL(current.file);
+          await img.decode();
         }
-      }
 
-      recorder.stop();
-      bgMusic.pause();
-      bgMusic.currentTime = 0;
+        const elapsed = (performance.now() - startTime) / 1000;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        if (current.text) {
+          ctx.fillStyle = 'white';
+          ctx.font = '28px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.shadowColor = 'black';
+          ctx.shadowBlur = 6;
+          ctx.fillText(current.text, canvas.width / 2, canvas.height / 2);
+          ctx.shadowBlur = 0;
+        }
+
+        if (elapsed < current.duration) {
+          requestAnimationFrame(drawFrame);
+        } else {
+          index++;
+          if (index < imageData.length) {
+            startTime = performance.now();
+            drawFrame();
+          } else {
+            recorder.stop();
+            bgMusic.pause();
+            bgMusic.currentTime = 0;
+          }
+        }
+      };
+
+      drawFrame();
     };
   </script>
 </body>
