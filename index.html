@@ -4,16 +4,42 @@
   <meta charset="UTF-8">
   <title>Images & Optional Text-to-Audio to Video</title>
   <style>
-    body { font-family: sans-serif; padding: 20px; }
-    canvas { display: none; }
-    video { margin-top: 20px; width: 100%; max-width: 640px; }
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      max-width: 700px;
+      margin: auto;
+    }
+    input[type="file"], button, textarea {
+      font-size: 16px;
+      padding: 10px;
+      margin-bottom: 10px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    canvas {
+      display: none;
+    }
+    video {
+      margin-top: 20px;
+      width: 100%;
+      max-width: 640px;
+    }
+    small {
+      display: block;
+      margin-bottom: 15px;
+      color: gray;
+    }
   </style>
 </head>
 <body>
   <h1>Multiple Images & Optional Text-to-Audio to Video</h1>
 
-  <input type="file" id="imageUpload" accept="image/*" multiple><br><br>
-  <textarea id="textInput" rows="4" cols="50" placeholder="Optional text to be spoken..."></textarea><br><br>
+  <input type="file" id="imageUpload" accept="image/*" multiple>
+  <small>Tip: On some mobile devices, long-press to select multiple images.</small>
+
+  <textarea id="textInput" rows="4" cols="50" placeholder="Optional text to be spoken..."></textarea>
+
   <button id="generateBtn">Generate Video</button>
 
   <video id="outputVideo" controls></video>
@@ -50,15 +76,16 @@
         img.src = URL.createObjectURL(file);
         await img.decode();
 
-        for (let i = 0; i < 30; i++) { // Show each image for ~3 seconds
+        for (let i = 0; i < 30; i++) { // Show each image for ~3 seconds (30 frames at 10fps)
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          await new Promise(r => setTimeout(r, 100));  // ~10 fps
+          await new Promise(r => setTimeout(r, 100));  // 100ms per frame = 10fps
         }
       }
 
       recorder.stop();
 
+      // Optional text-to-speech
       if (text.trim()) {
         const utterance = new SpeechSynthesisUtterance(text);
         speechSynthesis.speak(utterance);
